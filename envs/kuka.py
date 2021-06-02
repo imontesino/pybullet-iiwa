@@ -9,7 +9,11 @@ import pybullet_data
 
 class Kuka:
 
-    def __init__(self, urdfRootPath=pybullet_data.getDataPath(), timestep=0.01, debug=False):
+    def __init__(self,
+                 urdfRootPath="urdf/",
+                 timestep=0.01,
+                 robotModel="kuka_with_gripper2.sdf",
+                 debug=False):
         self.debug = debug
         self.debug_line_id = None
         self.urdfRootPath = urdfRootPath
@@ -39,10 +43,21 @@ class Kuka:
             0.00001, 0.00001, 0.00001, 0.00001, 0.00001
         ]
 
-        objects = p.loadURDF(os.path.join(self.urdfRootPath,
-                            "kuka_iiwa/model.sdf"))
-        self.kukaUid = objects[0]
+        robotFile = os.path.join(self.urdfRootPath,robotModel)
+        self.fileName, fileExtension = os.path.splitext(robotFile)
+        if fileExtension.lower() == ".urdf":
+            self.kukaUid = p.loadURDF(robotFile)
+        elif fileExtension.lower() == ".sdf":
+            objects = p.loadSDF(robotFile)
+            self.kukaUid = objects[0]
+        else:
+            raise ValueError("Robot file not in .urdf or .sdf format")
+
         self.reset()
+
+    def __del__(self):
+        p.removeBody(self.kukaUid)
+        print("{} with id: {} was removed from the simulation.".format(self.fileName, self.kukaUid))
 
     def reset(self):
         # for i in range (p.getNumJoints(self.kukaUid)):

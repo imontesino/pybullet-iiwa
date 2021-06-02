@@ -7,7 +7,7 @@ import pybullet as p
 import pybullet_data
 from gym import spaces
 
-from kuka import Kuka
+from .kuka import Kuka
 import time
 
 class PCEnv(gym.Env):
