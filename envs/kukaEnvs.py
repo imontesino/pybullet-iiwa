@@ -275,10 +275,6 @@ class PCEnv(gym.Env):
         # Total rewards in an episode
         episode_returns[0] = rewards.sum()
 
-
-        print("Mean time to set joints {}s".format(np.mean(t_joint)))
-        print("Mean time to set torques {}s".format(np.mean(t_torques)))
-
         # Disable the position controller after using it in
         # getTorquesFromTrajectory
         self.robot.enableTorqueControl()
@@ -333,6 +329,7 @@ class PCEnv(gym.Env):
             return rgb_array
 
     def close(self):
+        del self.robot
         p.disconnect(physicsClientId=self.physicsClient)
 
     def set_realtime(self, value):
