@@ -43,6 +43,15 @@ class Kuka:
             0.00001, 0.00001, 0.00001, 0.00001, 0.00001
         ]
 
+        # Initial configuration
+        self.initialJointPositions = [
+            0.006418, 0.413184, -0.011401, -1.589317, 0.005379, 1.137684, -0.006539, 0.000048,
+            -0.299912, 0.000000, -0.000043, 0.299960, 0.000000, -0.000200
+        ]
+
+        self.basePos = [-0.100000, 0.000000, 0.070000]
+        self.baseOrn = [0.000000, 0.000000, 0.000000, 1.000000]
+
         robotFile = os.path.join(self.urdfRootPath,robotModel)
         self.fileName, fileExtension = os.path.splitext(robotFile)
         if fileExtension.lower() == ".urdf":
@@ -62,12 +71,8 @@ class Kuka:
     def reset(self):
         # for i in range (p.getNumJoints(self.kukaUid)):
         #  print(p.getJointInfo(self.kukaUid,i))
-        p.resetBasePositionAndOrientation(self.kukaUid, [-0.100000, 0.000000, 0.070000],
-                                          [0.000000, 0.000000, 0.000000, 1.000000])
-        self.initialJointPositions = [
-            0.006418, 0.413184, -0.011401, -1.589317, 0.005379, 1.137684, -0.006539, 0.000048,
-            -0.299912, 0.000000, -0.000043, 0.299960, 0.000000, -0.000200
-        ]
+        p.resetBasePositionAndOrientation(self.kukaUid, self.basePos, self.baseOrn)
+
         self.numJoints = p.getNumJoints(self.kukaUid)
         for jointIndex in range(self.numJoints):
             p.resetJointState(self.kukaUid, jointIndex,
@@ -98,6 +103,7 @@ class Kuka:
         for jointIndex in range(self.numJoints):
             p.resetJointState(self.kukaUid, jointIndex,0.0)
 
+    # TODO no references to RL in robot
     def getActionShape(self):
         return (7,)  # A torque for each motor
 
@@ -139,6 +145,7 @@ class Kuka:
                               jointPositions[jointIndex],
                               targetVelocity=jointVelocities[jointIndex])
 
+    # TODO no references to RL in robot
     def applyAction(self, motorCommands):
         self.torqueControl(motorCommands)
 
