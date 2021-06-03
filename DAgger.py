@@ -4,6 +4,7 @@ import time
 import os
 import pickle
 import numpy as np
+from tensorboard_logging import Logger
 
 # kuka environment for Position control
 from envs.kukaEnvs import PCEnv
@@ -110,6 +111,10 @@ def Dagger(env, algorithm, policy, iterations,
            epochs_per_dataset=10,
            gif_interval=None):
 
+    log_dir = "log/DAgger"
+    os.makedirs(log_dir, exist_ok=True)
+    tb_log = Logger(log_dir)
+
     # Save a gif of the model every 10% of the total number of iterations
     if gif_interval is None:
         # Prevent modulo by zero
@@ -199,6 +204,7 @@ def Dagger(env, algorithm, policy, iterations,
 
         print("Episode Returns -> avg_ret: {:.0f} std_ret {:.0f}".format(avg_ret,std_ret))
         print("Testing Time {:.0f} s".format(t_test_end-t_test_start))
+        tb_log.log_scalar('avg_ret', avg_ret, i)
 
         if gif_interval != 0 and (i % gif_interval) == 0:
             t_gif_start = time.time()
@@ -234,6 +240,11 @@ def parse_args():
                         help='Iterartions of the DAgger algorithm',
                         default=15)
 
+    my_parser.add_argument('--rl_timesteps', '-r',
+                        type=int,
+                        help='Run a DeepRL algorithm after dagger for RL_TIMESTEPS timesteps',
+                        default=0)
+
     my_parser.add_argument('--gif_interval', '-g',
                         type=int,
                         help='Interval at wich to save a gif of the trained agent',
@@ -258,13 +269,14 @@ if __name__ == '__main__':
     gif_interval = args.gif_interval
 
     # DeepRL after DAgger
-    post_train = False
+    algorithm = A2C
+    policy = CustomMLPPolicy
+    rl_timesteps = args.rl_timesteps
     training_time = int(1e5)
+    tensorboard_log="./{}_{}/".format(algorithm.__name__, policy.__name__)
 
     # Create the environment
     env = PCEnv(gui=args.gui)
-    algorithm = A2C
-    policy = CustomMLPPolicy
 
     if not test:
         # Clean up last run results
@@ -277,15 +289,18 @@ if __name__ == '__main__':
                        epochs_per_dataset=100,
                        gif_interval=gif_interval,
                        batch_size=8*4096)
+
+        model_dir = "models/DAgger"
+        os.makedirs(model_dir, exist_ok=True)
         model_name="Dagger_{}_iterations".format(dagger_iterations)
-        model.save("models/"+model_name)
+        model.save(os.path.join(model_dir+model_name))
         save_gif(model, filename="gifs/{}.gif".format(model_name))
 
         # Optimize further with RL
-        if post_train:
-            model.learn(training_time)
+        if rl_timesteps > 0:
+            model.learn(rl_timesteps)
             model_name="DAgger_and_{}_{:.0f}e5_timesteps".format(algorithm.__name__ ,
-                                                            training_time/10000)
+                                                            rl_timesteps/10000)
             model.save("models/"+model_name)
             save_gif(model, filename="gifs/{}.gif".format(model_name))
 
