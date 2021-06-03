@@ -338,7 +338,8 @@ class PCEnv(gym.Env):
 
     def onscreen_title(self, text,
                        position=[-0.000000, -1.0700, 0.9000],
-                       color=[0.000000, 0.000000, 0.000000]): # black
+                       color=[0.000000, 0.000000, 0.000000],# black
+                       text_size=7):
         if self.gui:
             if self.title_id is None:
                 self.title_id = p.addUserDebugText(text,
@@ -350,7 +351,7 @@ class PCEnv(gym.Env):
                 p.addUserDebugText(text,
                                    position,
                                    color,
-                                   textSize=7,
+                                   textSize=text_size,
                                    replaceItemUniqueId=0)
 
     def set_realtime(self, value):

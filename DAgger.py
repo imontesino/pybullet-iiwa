@@ -36,15 +36,16 @@ from stable_baselines.gail import ExpertDataset
 
 
 def delete_contents(folder):
-    for filename in os.listdir(folder):
-        file_path = os.path.join(folder, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e))
+    if os.path.exists(folder):
+        for filename in os.listdir(folder):
+            file_path = os.path.join(folder, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 timer = timing.timer()
 
@@ -135,6 +136,7 @@ def Dagger(env, algorithm, policy, iterations,
                       )
 
     # Generate the first expert Dataset
+    env.onscreen_title("First Trajectory", text_size=5)
     dataset = env.generate_expert_traj(num_episodes=1, episode_timesteps=5000)
 
     dataset_info = {
@@ -176,9 +178,12 @@ def Dagger(env, algorithm, policy, iterations,
         t_test_start = time.time()
         for n in range(episodes_per_it):
             # Run agent and record its trajectory
+            env.onscreen_title("Test {}".format(i))
             traj = test_agent(model)
 
             # Get expert dataset from that trajectory
+            # Run agent and record its trajectory
+            env.onscreen_title("Anotate Test {}".format(i), text_size=5)
             new_trajectory = env.generate_expert_from_traj(traj)
 
             # Add that episode to the a buffer
