@@ -20,6 +20,10 @@ class PCEnv(gym.Env):
 
     def __init__(self, episode_timesteps=10000, gui=False, gui_height=480, gui_width=640):
         super(PCEnv, self).__init__()
+        # Debug title text
+        self.title_id = None
+
+        # GUI visualizer prameters
         self.gui = False
         self.gui_width = gui_width
         self.gui_height = gui_height
@@ -331,6 +335,23 @@ class PCEnv(gym.Env):
     def close(self):
         del self.robot
         p.disconnect(physicsClientId=self.physicsClient)
+
+    def onscreen_title(self, text,
+                       position=[-0.000000, -1.0700, 0.9000],
+                       color=[0.000000, 0.000000, 0.000000]): # black
+        if self.gui:
+            if self.title_id is None:
+                self.title_id = p.addUserDebugText(text,
+                                                   position,
+                                                   color,
+                                                   textSize=7,
+                                                   replaceItemUniqueId=0)
+            else:
+                p.addUserDebugText(text,
+                                   position,
+                                   color,
+                                   textSize=7,
+                                   replaceItemUniqueId=0)
 
     def set_realtime(self, value):
         p.setRealTimeSimulation(value)
