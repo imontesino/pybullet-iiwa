@@ -155,22 +155,7 @@ class Kuka:
         pos = position
         orn = p.getQuaternionFromEuler(orn)
 
-        if initalGuess is None:
-            jointPoses = p.calculateInverseKinematics(self.kukaUid,
-                                                    self.kukaEndEffectorIndex,
-                                                    pos,
-                                                    orn,
-                                                    jointDamping=self.jd)
-        else:
-            jointPoses = p.calculateInverseKinematics(self.kukaUid,
-                                                    self.kukaEndEffectorIndex,
-                                                    pos,
-                                                    orn,
-                                                    lowerLimits=self.ll,
-                                                    upperLimits=self.ul,
-                                                    jointRanges=self.jr,
-                                                    restPoses=initalGuess,
-                                                    jointDamping=self.jd)
+        jointPoses = self.inverseKinematics(pos, orn)
 
         p.setJointMotorControlArray(self.kukaUid,
                                     jointIndices=range(
@@ -184,6 +169,28 @@ class Kuka:
                                     positionGains=[0.3 for i in range(
                                         self.kukaEndEffectorIndex + 1)],
                                     velocityGains=[1 for i in range(self.kukaEndEffectorIndex + 1)])
+
+    def inverseKinematics(self, targetPos, targetOrn,
+                          initialGuess=None):
+        if initialGuess is None:
+            jointPoses = p.calculateInverseKinematics(self.kukaUid,
+                                                    self.kukaEndEffectorIndex,
+                                                    targetPos,
+                                                    targetOrn,
+                                                    jointDamping=self.jd)
+        else:
+            jointPoses = p.calculateInverseKinematics(self.kukaUid,
+                                                    self.kukaEndEffectorIndex,
+                                                    targetPos,
+                                                    targetOrn,
+                                                    lowerLimits=self.ll,
+                                                    upperLimits=self.ul,
+                                                    jointRanges=self.jr,
+                                                    restPoses=initialGuess,
+                                                    currentPosition=initialGuess,
+                                                    jointDamping=self.jd)
+
+        return jointPoses
 
     def enableTorqueControl(self):
         jointFriction = 0.01
