@@ -2,10 +2,15 @@ import copy
 import inspect
 import math
 import os
+import IPython
 
 import numpy as np
 import pybullet as p
 import pybullet_data
+
+import PyKDL as kdl
+from kdl_parser import urdf as kdlurdf
+from kdl_error_codes import error2name
 
 class Kuka:
 
@@ -13,10 +18,28 @@ class Kuka:
                  urdfRootPath="urdf/",
                  timestep=0.01,
                  robotModel="kuka_with_gripper2.sdf",
-                 debug=False):
+                 debug=False,
+                 useKDL=False):
+
         self.debug = debug
         self.debug_line_id = None
         self.urdfRootPath = urdfRootPath
+
+        # Use KDL Solver for IK instead of pybullet
+        self.useKDL = useKDL
+
+        robotFile = os.path.join(self.urdfRootPath,robotModel)
+        self.fileName, fileExtension = os.path.splitext(robotFile)
+        if fileExtension.lower() == ".urdf":
+            self.kukaUid = p.loadURDF(robotFile)
+        elif fileExtension.lower() == ".sdf":
+            objects = p.loadSDF(robotFile)
+            self.kukaUid = objects[0]
+        else:
+            raise ValueError("Robot file not in .urdf or .sdf format")
+
+        ## Kinematic Parameters
+
         self.timestep = timestep
         self.maxVelocity = .35
         self.maxForce = 200.
@@ -49,18 +72,17 @@ class Kuka:
             -0.299912, 0.000000, -0.000043, 0.299960, 0.000000, -0.000200
         ]
 
+        if self.useKDL:
+            raise NotImplementedError #TODO Delete when finished
+            jointInfos = [p.getJointInfo(self.kukaUid, i) for i in range(7)]
+            self.jointsMaxKDL = kdl.JntArray(7)
+            self.jointsMinKDL = kdl.JntArray(7)
+            for i, info in enumerate(jointInfos):
+                self.jointsMaxKDL[i] = info[8]
+                self.jointsMinKDL[i] = info[9]
+
         self.basePos = [-0.100000, 0.000000, 0.070000]
         self.baseOrn = [0.000000, 0.000000, 0.000000, 1.000000]
-
-        robotFile = os.path.join(self.urdfRootPath,robotModel)
-        self.fileName, fileExtension = os.path.splitext(robotFile)
-        if fileExtension.lower() == ".urdf":
-            self.kukaUid = p.loadURDF(robotFile)
-        elif fileExtension.lower() == ".sdf":
-            objects = p.loadSDF(robotFile)
-            self.kukaUid = objects[0]
-        else:
-            raise ValueError("Robot file not in .urdf or .sdf format")
 
         self.reset()
 
@@ -170,7 +192,15 @@ class Kuka:
                                         self.kukaEndEffectorIndex + 1)],
                                     velocityGains=[1 for i in range(self.kukaEndEffectorIndex + 1)])
 
-    def inverseKinematics(self, targetPos, targetOrn,
+    def inverseKinematics(self, pos, orn):
+        if self.useKDL:
+            jointPoses = self.inverseKinematicsKDL(pos, orn)
+        else:
+            jointPoses = self.inverseKinematicsPB(pos, orn)
+
+        return jointPoses
+
+    def inverseKinematicsPB(self, targetPos, targetOrn,
                           initialGuess=None):
         if initialGuess is None:
             jointPoses = p.calculateInverseKinematics(self.kukaUid,
@@ -191,6 +221,54 @@ class Kuka:
                                                     jointDamping=self.jd)
 
         return jointPoses
+
+    def inverseKinematicsKDL(self, targetPos, targetOrn,
+                            initialGuess=None):
+        #TODO: Clean-up
+        if initialGuess == None:
+            initialGuess = self.initialJointPositions[:7]
+
+        root = 'lbr_iiwa_link_0'
+        tip = 'lbr_iiwa_link_7'
+        urdfRootPath=pybullet_data.getDataPath()
+        path_to_urdf = os.path.join(urdfRootPath,"kuka_iiwa/model.urdf")
+        ok, tree = kdlurdf.treeFromFile(path_to_urdf)
+
+        chain = tree.getChain(root,tip)
+
+        # Solvers
+        vik = kdl.ChainIkSolverVel_pinv(chain)
+        fk = kdl.ChainFkSolverPos_recursive(chain)
+        ik = kdl.ChainIkSolverPos_NR_JL(chain,
+                                        self.jointsMinKDL,
+                                        self.jointsMaxKDL,
+                                        fk,
+                                        vik)
+
+        pos = kdl.Vector(targetPos[0],targetPos[1],targetPos[2])
+        quat = p.getQuaternionFromEuler([0, 1, 0])
+        rot_mat = p.getMatrixFromQuaternion(quat)
+        rot_x = kdl.Vector(rot_mat[0], rot_mat[1], rot_mat[2])
+        rot_y = kdl.Vector(rot_mat[3], rot_mat[4], rot_mat[5])
+        rot_z = kdl.Vector(rot_mat[6], rot_mat[7], rot_mat[8])
+        orn = kdl.Rotation(rot_x, rot_y, rot_z)
+        desiredFrame = kdl.Frame(orn, pos)
+        #print("Desired Position: ", desiredFrame.p)
+
+
+        q_init = kdl.JntArray(7)
+        for i, q in enumerate(initialGuess):
+            q_init[i] = q
+
+        jointPoses = kdl.JntArray(7)
+        ret = ik.CartToJnt(q_init,desiredFrame,jointPoses)
+        #print("Output angles in rads: ",jointPoses)
+        #print("RetCode : ", ret)
+
+        if ret < 0:
+            print("IK failed with error: ", error2name[ret])
+
+        return list(jointPoses)
 
     def enableTorqueControl(self):
         jointFriction = 0.01
