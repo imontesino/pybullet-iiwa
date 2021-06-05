@@ -4,7 +4,7 @@ import time
 import os
 import pickle
 import numpy as np
-from tensorboard_logging import Logger
+from utils.tensorboard_logging import Logger
 
 # kuka environment for Position control
 from envs.kukaEnvs import PCEnv
@@ -14,7 +14,7 @@ import imageio
 
 # Debugging
 import IPython
-import timing
+import utils.timing
 import time
 
 # Prevent deprecation warnings for Tensorflow 1
