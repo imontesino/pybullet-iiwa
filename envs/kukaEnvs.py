@@ -9,6 +9,7 @@ from gym import spaces
 
 from .kuka import Kuka
 import time
+import IPython
 
 class PCEnv(gym.Env):
     """Position Control Environment for Kuka IIWA
@@ -63,7 +64,7 @@ class PCEnv(gym.Env):
         self.episode_timesteps = episode_timesteps
 
         # Initialize a robot instance
-        self.robot = Kuka()
+        self.robot = Kuka(useKDL=True)
 
         # Define action and observation space
         # They must be gym.spaces objects
@@ -219,13 +220,14 @@ class PCEnv(gym.Env):
         return dataset
 
     def generate_expert_from_traj(self, traj):
-        """Summary or Description of the Function
+        """Generates a dataset (dict) in the format expected by ExprtDataset
 
         Parameters:
-        argument1 (int): Description of arg1
+        traj (list): a list of observation collected from an agent episode
 
         Returns:
-        int:Returning value
+        dataset (dict): a dataset in the format expected by ExprtDataset.
+        Contains the actions taken by an expert.
 
         """
         # The expert dataset is saved in python dictionary format with
@@ -247,13 +249,15 @@ class PCEnv(gym.Env):
         t_joint = np.zeros(len(traj))
         t_torques = np.zeros(len(traj))
 
+        nj = self.robot.numJoints
+
         for i in range(len(traj)):
             #curr_pos = traj[i][0:3]
             #curr_orn = traj[i][3:6]
             goal_pos = traj[i][6:9]
             goal_orn = traj[i][9:12]
-            joint_positions = traj[i][12:24] # 7 joints + grippers
-            joint_velocities = traj[i][24:36]
+            joint_positions = traj[i][12:12+nj] # 7 joints + grippers
+            joint_velocities = traj[i][12+nj:12+2*nj]
 
             t_joint_start = time.time()
             # Set the robot to the position in trajectory
