@@ -24,6 +24,27 @@ class PCEnv(gym.Env):
         # Debug title text
         self.title_id = None
 
+        # current timestep
+        self.t = 0
+
+        self.__start_pybullet(gui, gui_height, gui_width)
+
+        self.episode_timesteps = episode_timesteps
+
+        # Initialize a robot instance
+        self.robot = Kuka(useKDL=True)
+
+        # Define action and observation space
+        # They must be gym.spaces objects
+        # There are 7 continous motor controls:
+        self.action_space = spaces.Box(-1, 1, self.robot.getActionShape())
+
+        # Observation space includescurent position and desired target
+        # Each position is 6 dimensional:
+        self.observation_space = spaces.Box(low=-np.inf, high=np.inf,
+                                            shape=(len(self.observation()),))
+
+    def __start_pybullet(self, gui, gui_height, gui_width):
         # GUI visualizer prameters
         self.gui = False
         self.gui_width = gui_width
@@ -57,24 +78,6 @@ class PCEnv(gym.Env):
         p.setGravity(0, 0, -9.79983)
         self.planeId = p.loadURDF("plane.urdf")
         self.timestep = 1/240
-
-        # current timestep
-        self.t = 0
-
-        self.episode_timesteps = episode_timesteps
-
-        # Initialize a robot instance
-        self.robot = Kuka(useKDL=True)
-
-        # Define action and observation space
-        # They must be gym.spaces objects
-        # There are 7 continous motor controls:
-        self.action_space = spaces.Box(-1, 1, self.robot.getActionShape())
-
-        # Observation space includescurent position and desired target
-        # Each position is 6 dimensional:
-        self.observation_space = spaces.Box(low=-np.inf, high=np.inf,
-                                            shape=(len(self.observation()),))
 
     def trajectory(self, t):
         # TODO make this editable online
