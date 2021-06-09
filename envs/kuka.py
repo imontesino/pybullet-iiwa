@@ -173,13 +173,13 @@ class Kuka:
         jointPositions = []
         for jointIndex in self.motorIndices:
             jointPositions.append(p.getJointState(self.kukaUid, jointIndex)[0])
-        return jointPositions
+        return np.array(jointPositions)
 
     def getJointVelocities(self):
         jointVelocities = []
         for jointIndex in self.motorIndices:
             jointVelocities.append(p.getJointState(self.kukaUid, jointIndex)[1])
-        return jointVelocities
+        return np.array(jointVelocities)
 
 
     def setJointStates(self, jointPositions,
@@ -224,7 +224,7 @@ class Kuka:
         else:
             jointPoses = self.inverseKinematicsPB(pos, orn)
 
-        return jointPoses
+        return np.array(jointPoses)
 
     def inverseKinematicsPB(self, targetPos, targetOrn,
                           initialGuess=None):
