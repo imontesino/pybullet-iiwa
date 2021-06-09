@@ -117,14 +117,25 @@ class PCEnv(gym.Env):
         return observation, reward, done, info
 
     def reward_function(self):
-        # Minimize the distance
+        return self.__joint_reward()
+
+    def __distance_reward(self):
+        # Minimize cartesian distance
         current_position = self.robot.getEndEffectorPose()
         target_position = self.trajectory(self.t)
         lin_distance = np.linalg.norm(
             (current_position[:3]-target_position[:3]))
         angle_distance = np.linalg.norm(
             (current_position[3:]-target_position[3:]))
-        return - 10*(lin_distance+angle_distance/(2*np.pi))
+        return - (lin_distance+angle_distance/(2*np.pi))/100
+
+    def __joint_reward(self):
+        # Minimize Joint Distance
+        currJPos = self.robot.getJointPositions()
+        currGoal = self.trajectory(self.t)
+        goalJPos = self.robot.inverseKinematics(currGoal[0:3],
+                                                p.getQuaternionFromEuler(currGoal[3:]))
+        return - np.linalg.norm(currJPos-goalJPos)
 
     def reset(self):
         self.robot.reset()
