@@ -285,7 +285,7 @@ class PCEnv(gym.Env):
             # the time of the trajectory
             actions[i] = self.robot.getTorquesFromTarget(goal_pos,
                                                          orn=goal_orn,
-                                                         debug=True)
+                                                         debug=False)
             t_torque_end = time.time()
 
             t_joint[i] = t_joint_end - t_joint_start
