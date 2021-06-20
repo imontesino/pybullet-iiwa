@@ -19,7 +19,14 @@ class PCEnv(gym.Env):
     """
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, episode_timesteps=10000, gui=False, gui_height=480, gui_width=640):
+    def __init__(self,
+                episode_timesteps=10000,
+                start_position=[0,0,0],
+                gui=False,
+                gui_height=480,
+                gui_width=640,
+                serverless=False):
+
         super(PCEnv, self).__init__()
         # Debug title text
         self.title_id = None
@@ -27,12 +34,17 @@ class PCEnv(gym.Env):
         # current timestep
         self.t = 0
 
-        self.__start_pybullet(gui, gui_height, gui_width)
+        # start a pybullet server
+        self.serverless = serverless
+
+        if not self.serverless:
+            self.__start_pybullet(gui, gui_height, gui_width)
 
         self.episode_timesteps = episode_timesteps
 
         # Initialize a robot instance
-        self.robot = Kuka(useKDL=True)
+        self.start_position = np.array(start_position)
+        self.robot = Kuka(useKDL=True, startingPosition=self.start_position)
 
         # Define action and observation space
         # They must be gym.spaces objects
@@ -98,7 +110,9 @@ class PCEnv(gym.Env):
         self.robot.torqueControl(action)
 
         # Step the simulation
-        p.stepSimulation()
+        if not self.serverless:
+            p.stepSimulation()
+
         self.t += 1
 
         # get achieved position and desired position
@@ -151,13 +165,14 @@ class PCEnv(gym.Env):
         obs.extend(list(target_position))
         obs.extend(list(self.robot.getJointPositions()))
         obs.extend(list(self.robot.getJointVelocities()))
-        return obs
+        return np.array(obs)
 
     def stabilize(self, timesteps=200):
         # Start at begining of trajectory
         for i in range(timesteps):
             self.robot.positionControl(self.trajectory(self.t)[:3])
-            p.stepSimulation()
+            if not self.serverless:
+                p.stepSimulation()
 
     def generate_expert_traj(self, num_episodes=1, episode_timesteps=None, verbose=0):
         """Generate a dataset from the actions taken by an expert agent (PID+IK)
@@ -351,26 +366,126 @@ class PCEnv(gym.Env):
             return rgb_array
 
     def close(self):
-        del self.robot
-        p.disconnect(physicsClientId=self.physicsClient)
+        if not self.serverless:
+            del self.robot
+            p.disconnect(physicsClientId=self.physicsClient)
 
     def onscreen_title(self, text,
-                       position=[-0.000000, -1.0700, 0.9000],
+                       position=None,
+                       orientation=[np.pi/2,0,np.pi/2],
                        color=[0.000000, 0.000000, 0.000000],# black
-                       text_size=7):
-        if self.gui:
-            if self.title_id is None:
-                self.title_id = p.addUserDebugText(text,
-                                                   position,
-                                                   color,
-                                                   textSize=7,
-                                                   replaceItemUniqueId=0)
-            else:
-                p.addUserDebugText(text,
-                                   position,
-                                   color,
-                                   textSize=text_size,
-                                   replaceItemUniqueId=0)
+                       text_size=0.4):
+        orientation=p.getQuaternionFromEuler(orientation)
+        if position is None:
+            position = self.start_position + np.array([0,0,0.9])
+        position[1]=position[1]-len(text)*0.09 # center text
+
+        if self.title_id is None:
+            self.title_id = p.addUserDebugText(text,
+                                                position,
+                                                color,
+                                                textSize=text_size,
+                                                textOrientation=orientation)
+        else:
+            p.addUserDebugText(text,
+                                position,
+                                color,
+                                textSize=text_size,
+                                replaceItemUniqueId=self.title_id,
+                                textOrientation=orientation)
+
+    def set_realtime(self, value):
+        if not self.serverless:
+            p.setRealTimeSimulation(value)
+
+
+class pb_env_server():
+
+    def __init__(self, episode_timesteps=10000, gui=False, gui_height=480, gui_width=640):
+        # Debug title text
+        self.title_id = None
+
+        # current timestep
+        self.t = 0
+
+        # handle of spawned envs
+        self.envs = []
+
+        self.__start_pybullet(gui, gui_height, gui_width)
+
+        self._p = p
+
+    def __del__(self):
+        for i in range(p.getNumBodies()):
+            p.removeBody(i)
+        p.disconnect()
+
+
+    def __start_pybullet(self, gui, gui_height, gui_width):
+        # GUI visualizer prameters
+        self.gui = False
+        self.gui_width = gui_width
+        self.gui_height = gui_height
+        self.camera_data = [None]*12
+        self.camera_data[10] = 3.2 # distance
+        self.camera_data[9] = -3.8 # pitch
+        self.camera_data[8] = 90 # yaw
+        self.camera_data[11] = [0.0, 0.0, 1] #target
+
+        optionstring = '--width={} --height={}'.format(
+        self.gui_width, self.gui_height)
+
+        # Start a pybullet instance
+        if gui:
+            self.physicsClient = p.connect(p.GUI, options=optionstring)
+            p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
+            camera_data = list(p.getDebugVisualizerCamera())
+
+            dist = self.camera_data[10]
+            pitch = self.camera_data[9]
+            yaw = self.camera_data[8]
+            target = self.camera_data[11]
+
+            p.resetDebugVisualizerCamera(dist, yaw, pitch, target)
+            self.gui = True
+        else:
+            self.physicsClient = p.connect(p.DIRECT, options=optionstring)
+
+        p.setAdditionalSearchPath(pybullet_data.getDataPath())
+        p.setGravity(0, 0, -9.79983)
+        self.planeId = p.loadURDF("plane.urdf")
+        self.timestep = 1/240
+
+    def spawn_env(self, start_position=[0,0,0]):
+        env=PCEnv(start_position=start_position, serverless=True)
+        self.envs.append(env)
+        return env
 
     def set_realtime(self, value):
         p.setRealTimeSimulation(value)
+
+    def step(self):
+        p.stepSimulation()
+
+    def onscreen_title(self, text,
+                    position=None,
+                    orientation=[np.pi/2,0,np.pi/2],
+                    color=[0.0, 0.0, 0.0],# black
+                    text_size=0.6):
+        if position is None:
+            position = [0, 0, 2]
+        position[1]=position[1]-len(text)*0.12 # center text
+        orientation=p.getQuaternionFromEuler(orientation)
+        if self.title_id is None:
+            self.title_id = p.addUserDebugText(text,
+                                                position,
+                                                color,
+                                                textSize=text_size,
+                                                textOrientation=orientation)
+        else:
+            p.addUserDebugText(text,
+                                position,
+                                color,
+                                textSize=text_size,
+                                replaceItemUniqueId=self.title_id,
+                                textOrientation=orientation)
