@@ -34,10 +34,10 @@ class PCEnv(gym.Env):
         # current timestep
         self.t = 0
 
-        # start a pybullet server
         self.serverless = serverless
 
         if not self.serverless:
+            # start a pybullet server if not launched in serverless mode
             self.__start_pybullet(gui, gui_height, gui_width)
 
         self.episode_timesteps = episode_timesteps
@@ -378,7 +378,7 @@ class PCEnv(gym.Env):
         orientation=p.getQuaternionFromEuler(orientation)
         if position is None:
             position = self.start_position + np.array([0,0,0.9])
-        position[1]=position[1]-len(text)*0.09 # center text
+        position[1]=position[1]-len(text)*(0.09*text_size/0.4) # center text
 
         if self.title_id is None:
             self.title_id = p.addUserDebugText(text,
