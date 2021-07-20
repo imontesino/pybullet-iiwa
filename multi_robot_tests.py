@@ -1,3 +1,5 @@
+"""Este es el docstring del módulo"""
+
 import math
 import os
 import time
@@ -7,6 +9,10 @@ from stable_baselines import DDPG, SAC, TD3, TRPO
 from envs.kukaEnvs import pb_env_server
 
 def steps2str(steps):
+    """Convert traning steps to elapsed sim time
+
+    :param steps: number of training steps simulated
+    """
     seconds = (steps*(1/240)) % (24 * 3600)
     hours = seconds // 3600
     seconds %= 3600
@@ -20,14 +26,14 @@ def steps2str(steps):
         time_str = "{:.2f} seconds".format(seconds)
     return time_str
 
-path = "models/algorithm_tests_new"
-directories = os.listdir(path)
+ALG_PATH = "models/algorithm_tests_new"
+directories = os.listdir(ALG_PATH)
 
 models = {}
 for directory in directories:
     save_point_time = int(directory.split("_")[0])
 
-    models_save_point = os.path.join(path, directory)
+    models_save_point = os.path.join(ALG_PATH, directory)
     algorithms = os.listdir(models_save_point)
 
     models_at_save_point = []
@@ -42,10 +48,10 @@ algorithms = {"SAC": SAC, "TD3": TD3, "DDPG": DDPG, "TRPO": TRPO}
 
 envs = []
 n_envs = len(algorithms.keys())
-l = 1.5  # separation between robots
-ofst = (l/2)*((n_envs+1) % 2)
+L = 1.5  # separation between robots
+ofst = (L/2)*((n_envs+1) % 2)
 starting_points = [
-    [0, ofst+l*math.ceil(0.5*i)*(-1)**i, 0] for i in range(n_envs)
+    [0, ofst+L*math.ceil(0.5*i)*(-1)**i, 0] for i in range(n_envs)
 ]
 
 # start the pybullet server
@@ -79,12 +85,12 @@ for save_point in sorted(models.keys()):
     for i in range(3000):
         t_start = time.time()
 
-        for i, agent in enumerate(agents):
-            env = envs[i]
-            action = agent.predict(obs[i], deterministic=True)
-            obs[i], _, _, _ = env.step(action[0])
+        for j, agent in enumerate(agents):
+            env = envs[j]
+            action = agent.predict(obs[j], deterministic=True)
+            obs[j], _, _, _ = env.step(action[0])
 
-        while(time.time()-t_start < 1/240):  # slow down to real time
+        while time.time()-t_start < 1/240:  # slow down to real time
             time.sleep(1/24000)
         server.step()
 
