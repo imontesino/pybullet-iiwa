@@ -9,10 +9,12 @@ import time
 import imageio
 import IPython
 import numpy as np
+import psutil
 
 # RL Algorithms and envs
 from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, EvalCallback
 
 # kuka environment for Position control
 from envs.kukaEnvs import PCEnv
@@ -83,7 +85,7 @@ def sac_grid_search(timesteps=int(1e6)):
     os.makedirs(model_dir, exist_ok=True)
 
     test_parameters = [
-        [10, 1, 0.1],  # target smoothing coefficient
+        [1, 0.1],  # target smoothing coefficient
         ["auto", "auto_0.1", "auto_0.01"],  # entropy coefficient
     ]
 
@@ -110,8 +112,7 @@ def sac_grid_search(timesteps=int(1e6)):
 
         model.learn(
             timesteps,
-            # log_interval=1, # episodes (1 ep = 10000 ts)
-            tb_log_name=name,
+            tb_log_name=name
         )
 
         name = os.path.join(model_dir, name)
@@ -160,6 +161,34 @@ def sac_grid_watch(save=False, fps=30):
 
     env_gui.close()
 
+
+def baseline_sac(timesteps=int(1e6)):
+    """Baseline result with default parameters for the SAC algorithm"""
+    num_cpu = 18  #psutil.cpu_count()
+    vec_env = SubprocVecEnv([make_env(i) for i in range(num_cpu)])
+
+    eval_callback = EvalCallback(vec_env, best_model_save_path='./checkpoints/',
+                             log_path='./logs/', eval_freq=int(1e5),
+                             deterministic=True, render=False)
+
+    checkpoint_callback = CheckpointCallback(save_freq=int(1e6), save_path='./checkpoints/',
+                                            name_prefix='model_chkpt')
+
+    callback_list = CallbackList([checkpoint_callback, eval_callback])
+
+    model = SAC(
+        "MlpPolicy",
+        vec_env,
+        ent_coef="auto_0.1",
+        verbose=2,
+        tensorboard_log="test_log_dir"
+        )
+
+    model.learn(timesteps,
+                tb_log_name="test_name_sac",
+                callback=callback_list)
+
+    model.save("models/sac_default_parameters_{}_timesteps".format(timesteps))
 
 if __name__ == "__main__":
 
