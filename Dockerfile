@@ -12,7 +12,7 @@ ENV TZ=Europe/Madrid
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt-get update
 
-# TODO group apt-get instructions
+# Install dependecies
 RUN apt-get install -y \
     git \
     python3-pip \
@@ -23,7 +23,6 @@ RUN apt-get install -y \
     libeigen3-dev \
     libcppunit-dev
 
-# TODO group apt-get instructions
 RUN apt-get install -y --reinstall ca-certificates
 
 RUN mkdir -p repos
