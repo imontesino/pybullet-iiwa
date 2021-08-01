@@ -1,0 +1,17 @@
+# vscode settings
+.vscode
+
+# Generated Data
+**/*.npz
+**/*.zip
+**/*.pkl
+gifs/
+
+# Tensorboard
+**/events.out.*
+
+# Jupyter Notebook
+**/.ipynb_checkpoints
+
+# pyenv
+**/.python-version
