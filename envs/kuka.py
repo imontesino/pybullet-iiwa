@@ -270,6 +270,7 @@ class Kuka:
         jointPoses = kdl.JntArray(7)
         ret = self.ik.CartToJnt(q_init,desiredFrame,jointPoses)
 
+        # TODO depend on verbose
         if ret < 0:
             print("IK failed with error: ", error2name[ret])
 
