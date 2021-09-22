@@ -43,7 +43,8 @@ def visualize_agent(model):
 
     :param model: a trained model of an agent
     """
-    visualize_env = PCEnv(gui=True)
+    visualize_env = PCEnv(gui=True, rand_traj_training=True,
+                          episode_timesteps=2000, useKDL=False, reward_function='cartesian')
     obs = visualize_env.reset()
     for _ in range(2000):
         action = model.predict(obs, deterministic=True)
@@ -205,7 +206,7 @@ def sac_grid_watch(save=False, fps=30):
 
 def baseline_sac(timesteps=int(1e6)):
     """Baseline result with default parameters for the SAC algorithm"""
-    num_cpu = 18  #psutil.cpu_count()
+    num_cpu = 18  # psutil.cpu_count()
     vec_env = SubprocVecEnv([make_env(i) for i in range(num_cpu)])
 
     eval_callback = EvalCallback(vec_env, best_model_save_path='./checkpoints/',
