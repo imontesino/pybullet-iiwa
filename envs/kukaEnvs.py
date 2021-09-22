@@ -81,7 +81,7 @@ class PCEnv(gym.Env):
 
         # Initialize a robot instance
         self.start_position = np.array(start_position)
-        self.robot = Kuka(useKDL=True, startingPosition=self.start_position)
+        self.robot = Kuka(useKDL=useKDL, startingPosition=self.start_position)
 
         # Define action and observation space
         # They must be gym.spaces objects
