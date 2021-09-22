@@ -2,10 +2,10 @@ import time
 
 import gym
 import numpy as np
-from numpy.lib.npyio import savez
 import pybullet as p
 import pybullet_data
 from gym import spaces
+from numpy.lib.npyio import savez
 
 from .kuka import Kuka
 from .utils.splines import BezierGeneratorCartesian, BezierGeneratorSpherical, baseline_circle_trajectory
