@@ -278,7 +278,68 @@ def random_trajectory_sac_viz(timesteps=int(1e6)):
 
     model.save("models/sac_random_traj_{}_timesteps".format(timesteps))
 
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Test or watch the agents')
+
+    parser.add_argument('--train', metavar='STEPS', type=int,
+                        help='train for STEPS timesteps')
+
+    parser.add_argument('--test', action='store_true',
+                        help='Run the agent in an interactive environment')
+
+    args = parser.parse_args()
+
+    return args
+
+def choose_model_file() -> str:
+    """Chooose a model file from a list of files in the models save directory"""
+    items = os.listdir("models")
+
+    model_files: list[str] = []
+    for name in items:
+        if name.endswith(".zip"):
+            model_files.append(name)
+
+    print("----- Model Files ------")
+    for i, file in enumerate(model_files):
+       print(str(i)+": "+file)
+
+    while True:
+        user_option = int(input("Model to load: "))
+        if user_option < len(model_files):
+            break
+        else:
+            print("Wrong option")
+
+    return "models/"+model_files[user_option].replace(".zip","")
+
+
 if __name__ == "__main__":
 
-    sac_grid_search(timesteps=int(1e7))
+    args = parse_args()
+
+    if args.test is True:
+        model_file = choose_model_file()
+        model = SAC.load(model_file)
+        interact_agent(model)
+
+    elif args.train is not False:
+        training_steps = args.train
+
+        model_file = None
+        while True:
+            use_model = input("Use a previous model as starting point? [y/n]: ")
+            if use_model.lower() == "y":
+                model_file = choose_model_file()
+                break
+            elif use_model.lower() == "n":
+                break
+
+        savefile = input("Choose a name for the saved model file: ")
+
+        if model_file is not None:
+            further_training(model_file, timesteps=training_steps, savefile=savefile)
+        else:
+            random_trajectory_sac(timesteps=training_steps)
 
