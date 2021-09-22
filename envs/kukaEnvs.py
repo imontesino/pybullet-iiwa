@@ -160,7 +160,7 @@ class PCEnv(gym.Env):
         return observation, reward, done, info
 
     def reward_function(self):
-        return self.__joint_reward()
+        return self.__reward()
 
     def __distance_reward(self):
         # Minimize cartesian distance
