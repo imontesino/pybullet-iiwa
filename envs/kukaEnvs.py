@@ -1,4 +1,4 @@
-import multiprocessing
+import time
 
 import gym
 import numpy as np
@@ -8,8 +8,7 @@ import pybullet_data
 from gym import spaces
 
 from .kuka import Kuka
-import time
-import IPython
+from .utils.splines import BezierGeneratorCartesian, BezierGeneratorSpherical, baseline_circle_trajectory
 
 class PCEnv(gym.Env):
     """Position Control Environment for Kuka IIWA
@@ -25,16 +24,51 @@ class PCEnv(gym.Env):
                 gui=False,
                 gui_height=480,
                 gui_width=640,
-                serverless=False):
+                serverless=False,
+                rand_traj_training=False,
+                useKDL=True,
+                reward_function="joint"):
 
         super(PCEnv, self).__init__()
         # Debug title text
         self.title_id = None
 
+        # allow access to pybullet directly
+        self.p = p
+
+        # set the trajectory function
+        self.rand_traj_training = rand_traj_training
+        if not self.rand_traj_training:
+            self.trajectory = baseline_circle_trajectory
+        else:
+            self.curve = BezierGeneratorSpherical(n_samples=5,
+                                         duration=(episode_timesteps-200)) # still for last 1000
+            self.trajectory = self.curve.evaluate
+
+        # Select reward function
+        reward_functions = {
+            "joint": self.__joint_reward,
+            "cartesian": self.__distance_reward
+        }
+        reward_options = list(reward_functions.keys())
+
+        if reward_function in reward_options:
+            self.__reward = reward_functions[reward_function]
+        else:
+            options_string = ", ".join(reward_options[:-1])+", or "+reward_options[-1]
+            raise ValueError("'reward_function' argument must be "+options_string)
+
+
+        # Target position viz id
+        self.target_id = None
+
         # current timestep
         self.t = 0
 
+
         self.serverless = serverless
+
+        self.gui = gui
 
         if not self.serverless:
             # start a pybullet server if not launched in serverless mode
@@ -90,18 +124,6 @@ class PCEnv(gym.Env):
         p.setGravity(0, 0, -9.79983)
         self.planeId = p.loadURDF("plane.urdf")
         self.timestep = 1/240
-
-    def trajectory(self, t):
-        # TODO make this editable online
-        radius = 0.1
-        [0.537, 0.0, 0.5]
-        x = 0.5321173259355029
-        y = -0.0011066349287836563
-        z = 0.55229843834858136
-        x += 0
-        y += np.sin(2*t*2*np.pi/5000)*radius
-        z += (np.cos(2*t*2*np.pi/5000)-1)*radius
-        return np.array([x, y, z, 0, -np.pi, 0])
 
     def step(self, action):
         done = False
