@@ -190,6 +190,94 @@ def baseline_sac(timesteps=int(1e6)):
 
     model.save("models/sac_default_parameters_{}_timesteps".format(timesteps))
 
+
+def further_training(model_file: str, timesteps: int = int(1e6), savefile: str=None):
+    """Load an already train model and train it with random trajectories in its workspace"""
+    if savefile is None:
+        savefile = model_file.split("/")[-1]+"and_polars"
+
+    num_cpu = 18  # psutil.cpu_count()
+    vec_env = SubprocVecEnv([make_env(
+        i, rand_traj_training=True, reward_function="cartesian") for i in range(num_cpu)])
+
+    eval_callback = EvalCallback(vec_env, best_model_save_path='./checkpoints/',
+                                 log_path='./logs/', eval_freq=int(1e5),
+                                 deterministic=True, render=False)
+
+    checkpoint_callback = CheckpointCallback(save_freq=int(1e6), save_path='./checkpoints/',
+                                             name_prefix='savefile')
+
+    callback_list = CallbackList([checkpoint_callback, eval_callback])
+
+    model = SAC.load(model_file, env=vec_env)
+
+    model.learn(timesteps,
+                tb_log_name="savefile",
+                callback=callback_list)
+
+    model.save("models/"+savefile)
+    print(model_file.split("."))
+    print(savefile)
+
+
+def random_trajectory_sac(timesteps=int(1e6)):
+    """Rresult with random trajectories to follow using SAC"""
+    num_cpu = 18  # psutil.cpu_count()
+    vec_env = SubprocVecEnv(
+        [make_env(i, rand_traj_training=True) for i in range(num_cpu)])
+
+    eval_callback = EvalCallback(vec_env, best_model_save_path='./checkpoints/',
+                                 log_path='./logs/', eval_freq=int(1e5),
+                                 deterministic=True, render=False)
+
+    checkpoint_callback = CheckpointCallback(save_freq=int(1e6), save_path='./checkpoints/',
+                                             name_prefix='model_chkpt')
+
+    callback_list = CallbackList([checkpoint_callback, eval_callback])
+
+    model = SAC(
+        "MlpPolicy",
+        vec_env,
+        ent_coef="auto_0.1",
+        verbose=2,
+        tensorboard_log="test_log_dir"
+    )
+
+    model.learn(timesteps,
+                tb_log_name="sac_random_traj",
+                callback=callback_list)
+
+    model.save("models/sac_random_traj_{}_timesteps".format(timesteps))
+
+
+def random_trajectory_sac_viz(timesteps=int(1e6)):
+    """Visualize training with random trajectories to follow using SAC"""
+    num_cpu = 18  # psutil.cpu_count()
+    vec_env = PCEnv(gui=True, rand_traj_training=True)
+
+    eval_callback = EvalCallback(vec_env, best_model_save_path='./checkpoints/',
+                                 log_path='./logs/', eval_freq=int(1e5),
+                                 deterministic=True, render=False)
+
+    checkpoint_callback = CheckpointCallback(save_freq=int(1e6), save_path='./checkpoints/',
+                                             name_prefix='model_chkpt')
+
+    callback_list = CallbackList([checkpoint_callback, eval_callback])
+
+    model = SAC(
+        "MlpPolicy",
+        vec_env,
+        ent_coef="auto_0.1",
+        verbose=2,
+        tensorboard_log="test_log_dir"
+    )
+
+    model.learn(timesteps,
+                tb_log_name="sac_random_traj",
+                callback=callback_list)
+
+    model.save("models/sac_random_traj_{}_timesteps".format(timesteps))
+
 if __name__ == "__main__":
 
     sac_grid_search(timesteps=int(1e7))
