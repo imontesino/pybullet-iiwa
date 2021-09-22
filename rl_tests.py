@@ -210,11 +210,11 @@ def baseline_sac(timesteps=int(1e6)):
     vec_env = SubprocVecEnv([make_env(i) for i in range(num_cpu)])
 
     eval_callback = EvalCallback(vec_env, best_model_save_path='./checkpoints/',
-                             log_path='./logs/', eval_freq=int(1e5),
-                             deterministic=True, render=False)
+                                 log_path='./logs/', eval_freq=int(1e5),
+                                 deterministic=True, render=False)
 
     checkpoint_callback = CheckpointCallback(save_freq=int(1e6), save_path='./checkpoints/',
-                                            name_prefix='model_chkpt')
+                                             name_prefix='model_chkpt')
 
     callback_list = CallbackList([checkpoint_callback, eval_callback])
 
@@ -224,7 +224,7 @@ def baseline_sac(timesteps=int(1e6)):
         ent_coef="auto_0.1",
         verbose=2,
         tensorboard_log="test_log_dir"
-        )
+    )
 
     model.learn(timesteps,
                 tb_log_name="test_name_sac",
