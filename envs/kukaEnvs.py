@@ -74,6 +74,9 @@ class PCEnv(gym.Env):
             # start a pybullet server if not launched in serverless mode
             self.__start_pybullet(gui, gui_height, gui_width)
 
+        if self.gui:
+            self.draw_target(self.trajectory(0), new_id=True)
+
         self.episode_timesteps = episode_timesteps
 
         # Initialize a robot instance
@@ -139,6 +142,10 @@ class PCEnv(gym.Env):
 
         # get achieved position and desired position
         observation = self.observation()
+
+        # draw target
+        if self.gui:
+            self.draw_target(self.trajectory(self.t))
 
         # get reward based on distance
         reward = self.reward_function()
@@ -415,6 +422,22 @@ class PCEnv(gym.Env):
                                 textSize=text_size,
                                 replaceItemUniqueId=self.title_id,
                                 textOrientation=orientation)
+
+    def draw_target(self, target, new_id=False):
+        start_p = target[0:3]
+        orn_q= p.getQuaternionFromEuler(target[3:6])
+        orn_mat = np.reshape(p.getMatrixFromQuaternion(orn_q), (3,3)) # pb returns (9,) vector
+        end_p = start_p + orn_mat.dot(np.array([0,0,1]))*0.1
+
+        if new_id:
+            self.target_id=p.addUserDebugLine(start_p, end_p,
+                                              lineWidth=5,
+                                              lineColorRGB=[1,0,0])
+        else:
+            p.addUserDebugLine(start_p, end_p,
+                                lineWidth=5,
+                                lineColorRGB=[1,0,0],
+                                replaceItemUniqueId=self.target_id)
 
     def set_realtime(self, value):
         if not self.serverless:
