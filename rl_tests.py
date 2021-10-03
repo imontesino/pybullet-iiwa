@@ -6,9 +6,9 @@ import itertools
 import os
 import shutil
 import time
+from typing import List
 
 import imageio
-import IPython
 import numpy as np
 import psutil
 
@@ -18,7 +18,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, EvalCallback
 
 # kuka environment for Position control
-from envs.kukaEnvs import PCEnv
+from iiwa_fri_gym import TorqueSimEnv
 
 
 def delete_contents(folder):
@@ -43,8 +43,8 @@ def visualize_agent(model):
 
     :param model: a trained model of an agent
     """
-    visualize_env = PCEnv(gui=True, rand_traj_training=True,
-                          episode_timesteps=2000, useKDL=False, reward_function='cartesian')
+    visualize_env = TorqueSimEnv(gui=True, rand_traj_training=True,
+                          episode_timesteps=2000, reward_function='cartesian')
     obs = visualize_env.reset()
     for _ in range(2000):
         action = model.predict(obs, deterministic=True)
@@ -59,8 +59,8 @@ def interact_agent(model):
 
     :param model: a trained model of an agent
     """
-    visualize_env = PCEnv(gui=True, rand_traj_training=True,
-                          episode_timesteps=2000, useKDL=False, reward_function='cartesian')
+    visualize_env = TorqueSimEnv(gui=True, rand_traj_training=True,
+                          episode_timesteps=2000, reward_function='cartesian')
     p = visualize_env.p
     p.configureDebugVisualizer(p.COV_ENABLE_GUI, 1)
     x_id = p.addUserDebugParameter("target_x", -1, 1, 0.53)
@@ -83,7 +83,7 @@ def interact_agent(model):
 
         def traj(t): return np.array([x, y, z, 0, -np.pi, 0])
         visualize_env.trajectory = traj
-        visualize_env.robot.torqueControl(action[0])
+        visualize_env.robot.torque_control(action[0])
         obs, _, _, _ = visualize_env.step(action[0])
         t_end = time.time()
 
@@ -94,7 +94,7 @@ def interact_agent(model):
 
 def make_env(rank, seed=0, *args, **kwargs):
     """
-    Utility function for multiprocessed env. Modified for KukaEnvs.PCEnv
+    Utility function for multiprocessed env. Modified for KukaEnvs.TorqueSimEnv
 
     :param num_env: (int) the number of environment you wish to have in subprocesses
     :param seed: (int) the initial seed for RNG
@@ -104,7 +104,7 @@ def make_env(rank, seed=0, *args, **kwargs):
     """
 
     def _init():
-        env = PCEnv(*args, **kwargs)
+        env = TorqueSimEnv(*args, **kwargs)
         env.seed(seed + rank)
         return env
 
@@ -171,7 +171,7 @@ def sac_grid_watch(save=False, fps=30):
     images = []
     timesteps = int(1e6)
 
-    env_gui = PCEnv(gui=True)
+    env_gui = TorqueSimEnv(gui=True)
     model_dir = "models/sac_tests_grid_search/{}_timesteps".format(timesteps)
 
     taus = [10, 1, 0.1]  # target smoothing coefficient
@@ -238,7 +238,7 @@ def further_training(model_file: str, timesteps: int = int(1e6), savefile: str=N
     if savefile is None:
         savefile = model_file.split("/")[-1]+"and_polars"
 
-    num_cpu = 18  # psutil.cpu_count()
+    num_cpu = psutil.cpu_count() - 1
     vec_env = SubprocVecEnv([make_env(
         i, rand_traj_training=True, reward_function="cartesian") for i in range(num_cpu)])
 
@@ -262,11 +262,15 @@ def further_training(model_file: str, timesteps: int = int(1e6), savefile: str=N
     print(savefile)
 
 
-def random_trajectory_sac(timesteps=int(1e6)):
-    """Rresult with random trajectories to follow using SAC"""
-    num_cpu = 18  # psutil.cpu_count()
+def random_trajectory_sac(timesteps=int(1e6), savefile: str=None):
+    """Result with random trajectories to follow using SAC"""
+
+    if savefile is None:
+        savefile = f"sac_random_traj_{timesteps}_timesteps"
+
+    num_cpu = psutil.cpu_count() - 1
     vec_env = SubprocVecEnv(
-        [make_env(i, rand_traj_training=True) for i in range(num_cpu)])
+        [make_env(i, rand_traj_training=False) for i in range(num_cpu)])
 
     eval_callback = EvalCallback(vec_env, best_model_save_path='./checkpoints/',
                                  log_path='./logs/', eval_freq=int(1e5),
@@ -289,13 +293,12 @@ def random_trajectory_sac(timesteps=int(1e6)):
                 tb_log_name="sac_random_traj",
                 callback=callback_list)
 
-    model.save("models/sac_random_traj_{}_timesteps".format(timesteps))
+    model.save("models"+savefile)
 
 
 def random_trajectory_sac_viz(timesteps=int(1e6)):
     """Visualize training with random trajectories to follow using SAC"""
-    num_cpu = 18  # psutil.cpu_count()
-    vec_env = PCEnv(gui=True, rand_traj_training=True)
+    vec_env = TorqueSimEnv(gui=True, rand_traj_training=True)
 
     eval_callback = EvalCallback(vec_env, best_model_save_path='./checkpoints/',
                                  log_path='./logs/', eval_freq=int(1e5),
@@ -338,7 +341,7 @@ def choose_model_file() -> str:
     """Chooose a model file from a list of files in the models save directory"""
     items = os.listdir("models")
 
-    model_files: list[str] = []
+    model_files: List[str] = []
     for name in items:
         if name.endswith(".zip"):
             model_files.append(name)
@@ -383,5 +386,5 @@ if __name__ == "__main__":
         if model_file is not None:
             further_training(model_file, timesteps=training_steps, savefile=savefile)
         else:
-            random_trajectory_sac(timesteps=training_steps)
+            random_trajectory_sac(timesteps=training_steps, savefile=savefile)
 
