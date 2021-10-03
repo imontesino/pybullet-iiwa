@@ -4,7 +4,6 @@ environment"""
 import argparse
 import itertools
 import os
-import shutil
 import time
 from typing import List
 
@@ -17,26 +16,10 @@ from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, EvalCallback
 
+from utils.folders import delete_contents
+
 # kuka environment for Position control
 from iiwa_fri_gym import TorqueSimEnv
-
-
-def delete_contents(folder):
-    """Remove all contents and subdirectories in a given directory
-
-    :param folder: the path of the directory to delete
-    """
-    if os.path.exists(folder):
-        for filename in os.listdir(folder):
-            file_path = os.path.join(folder, filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print("Failed to delete %s. Reason: %s" % (file_path, e))
-
 
 def visualize_agent(model):
     """Show the agent acting in a Visual environment
