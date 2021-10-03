@@ -5,8 +5,7 @@ import time
 import numpy as np
 from stable_baselines3 import SAC
 
-from envs.kukaEnvs import pb_env_server
-import IPython
+from iiwa_fri_gym.sim_env import PbEnvServer
 
 def steps2str(steps):
     seconds = (steps*(1/240)) % (24 * 3600)
@@ -59,7 +58,7 @@ for i in range(models.shape[0]):
 
 
 # start the pybullet server
-server = pb_env_server(gui=True)
+server = PbEnvServer(gui=True)
 title = "Trained: tau vs ent_coef ({})".format(steps2str(timesteps))
 server.onscreen_title(title)
 
