@@ -204,7 +204,7 @@ def random_trajectory_sac(timesteps=int(1e6), savefile: str=None):
                 tb_log_name="sac_random_traj",
                 callback=callback_list)
 
-    model.save("models"+savefile)
+    model.save("models/"+savefile)
 
 
 def random_trajectory_sac_viz(timesteps=int(1e6)):
