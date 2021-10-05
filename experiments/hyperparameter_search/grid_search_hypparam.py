@@ -9,13 +9,10 @@ import psutil
 from iiwa_fri_gym import TorqueSimEnv
 # RL Algorithms and envs
 from stable_baselines3 import SAC
-from stable_baselines3.common.callbacks import (CallbackList,
-                                                CheckpointCallback,
-                                                EvalCallback)
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-from utils.folders import delete_contents
-from utils.rl_helpers import make_env
+from experiments.utils.folders import delete_contents
+from experiments.utils.rl_helpers import make_env
 
 
 def sac_grid_search(timesteps=int(1e6)):
@@ -24,13 +21,13 @@ def sac_grid_search(timesteps=int(1e6)):
     :param timesteps: training timesteps for each point on hyperparameter grid
     """
 
-    log_dir = "sac_tests_grid_search/{}_timesteps/".format(timesteps)
+    log_dir = f"tf_log/{timesteps}_timesteps/"
     os.makedirs(log_dir, exist_ok=True)
     if timesteps < 1e6:
         delete_contents(log_dir)
 
     # Create log dir
-    model_dir = "models/sac_tests_grid_search/{}_timesteps/".format(timesteps)
+    model_dir = f"models/{timesteps}_timesteps/"
     os.makedirs(model_dir, exist_ok=True)
 
     test_parameters = [
@@ -46,10 +43,12 @@ def sac_grid_search(timesteps=int(1e6)):
     for param in parm_test_set:
         tau = param[0]
         ent_coef = param[1]
-        print("--- tau: {} Ent Coeff: {} ---".format(tau, ent_coef))
-        name = "SAC_{}tau_{}ec".format(
-            str(tau).replace(".", "0"), str(ent_coef).replace(".", "0")
-        )
+        print(f"--- tau: {tau} Ent Coeff: {ent_coef} ---")
+
+        tau_str = str(tau).replace(".", "0")
+        ent_coef = str(ent_coef).replace(".", "0")
+        name = f"SAC_{tau_str}tau_{ent_coef}ec"
+
         vec_env.reset()
         model = SAC(
             "MlpPolicy",
@@ -80,7 +79,7 @@ def sac_grid_watch(save=False, fps=30):
     timesteps = int(1e6)
 
     env_gui = TorqueSimEnv(gui=True)
-    model_dir = "models/sac_tests_grid_search/{}_timesteps".format(timesteps)
+    model_dir = f"models/sac_tests_grid_search/{timesteps}_timesteps"
 
     taus = [10, 1, 0.1]  # target smoothing coefficient
     ent_coefs = ["auto", "auto_0.1", "auto_0.01"]  # entropy coefficient
@@ -121,9 +120,9 @@ def parse_args():
     parser.add_argument('--test', action='store_true',
                         help='View a grid of agents trained on the diffrent parameters')
 
-    args = parser.parse_args()
+    parsed_args = parser.parse_args()
 
-    return args
+    return parsed_args
 
 if __name__ == "__main__":
 

@@ -11,7 +11,7 @@ from experiments.utils.rl_helpers import steps2str
 
 
 timesteps = 1000000
-path = f"models/sac_tests_grid_search/{timesteps}_timesteps"
+path = f"models/{timesteps}_timesteps"
 
 taus = [1, 0.1, 10] # target smoothing coefficient
 ent_coefs = ["auto_0.1", "auto", "auto_0.01"]  # entropy coefficient
@@ -79,8 +79,8 @@ for _ in range(2000):
         action = agent.predict(obs[i], deterministic=True)
         obs[i], _, _, _ = env.step(action[0])
 
-    while(time.time()-t_start < 1/240):  # slow down to real time
-        time.sleep(1/24000)
+    while time.time()-t_start < 1/240 :  # slow down to real time
+        time.sleep(1/240)
     server.step()
 
 for env in envs:
