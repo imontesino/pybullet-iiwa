@@ -9,7 +9,7 @@ import numpy as np
 from iiwa_fri_gym.sim_env import PbEnvServer, TorqueSimEnv
 from stable_baselines3 import SAC
 
-from experiments.utils.rl_helpers import steps2str
+from utils.rl_helpers import steps2str
 
 def nn_size_watch(timesteps=int(1e7)):
     """Try diffrent net architectures
@@ -17,7 +17,6 @@ def nn_size_watch(timesteps=int(1e7)):
     :param timesteps: training timesteps for each point on hyperparameter grid
     """
 
-    timesteps = 1000000
     path = f"models/{timesteps}_timesteps"
 
     # Policy network layers
@@ -80,6 +79,14 @@ def nn_size_watch(timesteps=int(1e7)):
     # Get models for algorithms saved
     agents: List[SAC] = []
     obs = [None for _ in range(n_envs)]
+
+    for i, model in enumerate(models.flatten()):
+        agent = SAC.load(model["file"], policy="MlpPolicy")
+        agents.append(agent)
+        envs[i].onscreen_title(model["name"], text_size=0.2)
+
+        # initial observations for each agent
+        obs[i] = envs[i].reset()
 
     for _ in range(2000):
         t_start = time.time()
