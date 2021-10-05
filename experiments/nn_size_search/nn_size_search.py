@@ -6,13 +6,9 @@ import itertools
 import psutil
 from stable_baselines3 import SAC
 from stable_baselines3.common.vec_env import SubprocVecEnv
-from stable_baselines3.common.callbacks import CallbackList, CheckpointCallback, EvalCallback
 
-# kuka environment for Position control
-from iiwa_fri_gym import TorqueSimEnv
-
-from utils.folders import choose_model_file, delete_contents
-from utils.rl_helpers import interact_agent, make_env
+from experiments.utils.folders import delete_contents
+from experiments.utils.rl_helpers import make_env
 
 def nn_size_search(timesteps=int(1e7)):
     """Try diffrent net architectures
@@ -20,13 +16,13 @@ def nn_size_search(timesteps=int(1e7)):
     :param timesteps: training timesteps for each point on hyperparameter grid
     """
 
-    log_dir = "nn_size_search/{}_timesteps/".format(timesteps)
+    log_dir = "tf_log/{}_timesteps/".format(timesteps)
     os.makedirs(log_dir, exist_ok=True)
     if timesteps < 1e6:
         delete_contents(log_dir)
 
     # Create log dir
-    model_dir = "models/nn_size_search/{}_timesteps/".format(timesteps)
+    model_dir = "models/{}_timesteps/".format(timesteps)
     os.makedirs(model_dir, exist_ok=True)
 
     test_parameters = [
