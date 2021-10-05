@@ -7,22 +7,11 @@ from stable_baselines3 import SAC
 
 from iiwa_fri_gym.sim_env import PbEnvServer
 
-def steps2str(steps):
-    seconds = (steps*(1/240)) % (24 * 3600)
-    hours = seconds // 3600
-    seconds %= 3600
-    minutes = seconds // 60
-    seconds %= 60
-    if hours > 0:
-        time_str = "{:.0f} hours, {:.0f} minutes".format(hours, minutes)
-    elif minutes > 0:
-        time_str = "{:.0f} minutes, {:.0f} seconds".format(minutes, seconds)
-    else:
-        time_str = "{:.2f} seconds".format(seconds)
-    return time_str
+from experiments.utils.rl_helpers import steps2str
+
 
 timesteps = 1000000
-path = "models/sac_tests_grid_search/{}_timesteps".format(timesteps)
+path = f"models/sac_tests_grid_search/{timesteps}_timesteps"
 
 taus = [1, 0.1, 10] # target smoothing coefficient
 ent_coefs = ["auto_0.1", "auto", "auto_0.01"]  # entropy coefficient
@@ -45,21 +34,21 @@ n_envs = models.size
 n_envs_x = models.shape[0]
 n_envs_y = models.shape[1]
 
-l = 1.5  # separation between robots
-ofst_x = (l/2)*((n_envs_x+1) % 2)
-ofst_y = (l/2)*((n_envs_y+1) % 2)
+L = 1.5  # separation between robots
+ofst_x = (L/2)*((n_envs_x+1) % 2)
+ofst_y = (L/2)*((n_envs_y+1) % 2)
 
 starting_points = np.zeros((models.shape[0],models.shape[1],3))
 for i in range(models.shape[0]):
     for j in range(models.shape[1]):
-        starting_points[i][j][0] = ofst_x+l*math.ceil(0.5*j)*(-1)**j
-        starting_points[i][j][1] = ofst_y+l*math.ceil(0.5*i)*(-1)**i
+        starting_points[i][j][0] = ofst_x+L*math.ceil(0.5*j)*(-1)**j
+        starting_points[i][j][1] = ofst_y+L*math.ceil(0.5*i)*(-1)**i
         starting_points[i][j][2] = 0
 
 
 # start the pybullet server
-server = PbEnvServer(gui=True)
-title = "Trained: tau vs ent_coef ({})".format(steps2str(timesteps))
+server = PbEnvServer()
+title = f"Trained: tau vs ent_coef ({steps2str(timesteps)})"
 server.onscreen_title(title)
 
 
@@ -82,7 +71,7 @@ for i, model in enumerate(models.flatten()):
     # initial observations for each agent
     obs[i] = envs[i].reset()
 
-for i in range(2000):
+for _ in range(2000):
     t_start = time.time()
 
     for i, agent in enumerate(agents):

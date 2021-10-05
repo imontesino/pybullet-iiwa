@@ -51,7 +51,7 @@ def interact_agent(model):
         y = p.readUserDebugParameter(y_id)
         z = p.readUserDebugParameter(z_id)
 
-        def traj(t): return np.array([x, y, z, 0, -np.pi, 0])
+        traj = lambda t : np.array([x, y, z, 0, -np.pi, 0])
         visualize_env.trajectory = traj
         visualize_env.robot.torque_control(action[0])
         obs, _, _, _ = visualize_env.step(action[0])
@@ -80,3 +80,22 @@ def make_env(rank, seed=0, *args, **kwargs):
 
     return _init
 
+
+def steps2str(steps, timestep = 1./240.) -> str:
+    """Transform a trained timesteps to a time trained string
+
+    Example:
+        steps2str(1.6e7) -> '13 hours, 53 minutes'
+    """
+    seconds = (steps*(timestep)) % (24 * 3600)
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    if hours > 0:
+        time_str = f"{hours:.0f} hours, {minutes:.0f} minutes"
+    elif minutes > 0:
+        time_str = f"{minutes:.0f} minutes, {seconds:.0f} seconds"
+    else:
+        time_str = f"{seconds:.2f} seconds"
+    return time_str
