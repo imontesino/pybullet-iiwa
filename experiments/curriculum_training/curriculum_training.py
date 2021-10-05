@@ -12,8 +12,8 @@ from stable_baselines3.common.callbacks import (CallbackList,
                                                 EvalCallback)
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-from utils.folders import choose_model_file
-from utils.rl_helpers import interact_agent, make_env
+from experiments.utils.folders import choose_model_file
+from experiments.utils.rl_helpers import interact_agent, make_env
 
 def random_trajectory_sac(timesteps=int(1e6), savefile: str=None):
     """Result with random trajectories to follow using SAC"""
@@ -48,10 +48,10 @@ def random_trajectory_sac(timesteps=int(1e6), savefile: str=None):
 
     model.save("models/"+savefile)
 
-def further_training(model_file: str, timesteps: int = int(1e6), savefile: str=None):
+def further_training(saved_model_file: str, timesteps: int = int(1e6), savefile: str=None):
     """Load an already train model and train it with random trajectories in its workspace"""
     if savefile is None:
-        savefile = model_file.split("/")[-1]+"and_polars"
+        savefile = saved_model_file.split("/")[-1]+"and_polars"
 
     num_cpu = psutil.cpu_count() - 1
     vec_env = SubprocVecEnv([make_env(
@@ -86,9 +86,9 @@ def parse_args():
     parser.add_argument('--test', action='store_true',
                         help='Run the agent in an interactive environment')
 
-    args = parser.parse_args()
+    parsed_args = parser.parse_args()
 
-    return args
+    return parsed_args
 
 if __name__ == "__main__":
 
@@ -96,8 +96,8 @@ if __name__ == "__main__":
 
     if args.test is True:
         model_file = choose_model_file()
-        model = SAC.load(model_file)
-        interact_agent(model)
+        loaded_model = SAC.load(model_file)
+        interact_agent(loaded_model)
 
     elif args.train is not False:
         training_steps = args.train
@@ -111,10 +111,9 @@ if __name__ == "__main__":
             elif use_model.lower() == "n":
                 break
 
-        savefile = input("Choose a name for the saved model file: ")
+        selected_file = input("Choose a name for the saved model file: ")
 
         if model_file is not None:
-            further_training(model_file, timesteps=training_steps, savefile=savefile)
+            further_training(model_file, timesteps=training_steps, savefile=selected_file)
         else:
-            random_trajectory_sac(timesteps=training_steps, savefile=savefile)
-
+            random_trajectory_sac(timesteps=training_steps, savefile=selected_file)
