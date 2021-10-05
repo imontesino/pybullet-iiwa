@@ -1,7 +1,6 @@
 import argparse
 import itertools
 import os
-from time import time
 
 import imageio
 import numpy as np
