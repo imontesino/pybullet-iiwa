@@ -9,7 +9,7 @@ import numpy as np
 from iiwa_fri_gym.sim_env import PbEnvServer, TorqueSimEnv
 from stable_baselines3 import SAC
 
-from utils.rl_helpers import steps2str
+from experiments.utils.rl_helpers import steps2str
 
 def nn_size_watch(timesteps=int(1e7)):
     """Try diffrent net architectures
