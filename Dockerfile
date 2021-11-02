@@ -1,5 +1,5 @@
-#Download base image ubuntu 20.04
-FROM pytorch/pytorch:1.8.1-cuda11.1-cudnn8-runtime
+#Download base image ubuntu 20.04 with cuda 11.1 support
+FROM nvidia/cuda:11.1.1-base-ubuntu20.04
 
 # Dockerfile info
 LABEL maintainer="monte.igna@gmail.com"
@@ -28,7 +28,15 @@ RUN apt-get install -y --fix-missing \
     libeigen3-dev \
     libboost-all-dev \
     libcppunit-dev \
+    curl \
     gdb
+
+# PyTorch with GPU support
+RUN pip3 install \
+    torch==1.8.2+cu111 \
+    torchvision==0.9.2+cu111 \
+    torchaudio==0.8.2 \
+    -f https://download.pytorch.org/whl/lts/1.8/torch_lts.html
 
 RUN  cmake --version
 
@@ -85,8 +93,6 @@ RUN git clone https://${REPO_TOKEN}@${FRI_CLIENT_REPO} FRI_SDK && \
     cd FRI_SDK && \
     mkdir build && cd build && cmake .. && make -j && make install
 
-SHELL ["/bin/bash", "-c"]
-
 # install the gym envs
 RUN git clone https://${REPO_TOKEN}@github.com/imontesino/iiwa-fri-gym && \
     cd iiwa-fri-gym && \
@@ -98,3 +104,14 @@ RUN git clone https://${REPO_TOKEN}@github.com/imontesino/iiwa-fri-gym && \
     cd .. && pip install . && \
     # Required by pybullet to output through the GUI
     apt-get update && apt-get install -y xvfb
+
+# Required by pybullet to output through the GUI
+RUN apt-get update && apt-get install -y xvfb
+#libnvidia-gl-480
+
+SHELL ["/bin/bash", "-c"]
+
+RUN curl \
+    -L https://raw.githubusercontent.com/docker/compose/1.29.2/contrib/completion/bash/docker-compose \
+    -o /etc/bash_completion.d/docker-compose
+
