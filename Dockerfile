@@ -1,5 +1,5 @@
 #Download base image ubuntu 20.04 with cuda 11.1 support
-FROM nvidia/cuda:11.1.1-base-ubuntu20.04
+FROM nvidia/cudagl:11.1.1-base-ubuntu20.04
 
 # Dockerfile info
 LABEL maintainer="monte.igna@gmail.com"
